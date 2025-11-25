@@ -1,0 +1,49 @@
+# GitHub Actions workflow for deploying to GitHub Pages
+# QuakeCloneWASM - Automated deployment
+
+name: Deploy to GitHub Pages
+
+# Trigger on push to main/master branch or manual workflow dispatch
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+# Set permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload the site directory contents
+          # If repository root is QuakeCloneWASM, use: './site'
+          # If repository root is webAssemblyQuakeClone, use: './QuakeCloneWASM/site'
+          path: './site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+

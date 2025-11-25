@@ -1,0 +1,11 @@
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.AssemblyInfoInputs.cache
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.AssemblyInfo.cs
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.csproj.CoreCompileInputs.cache
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\bin\Debug\net9.0\GameEngine.deps.json
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\bin\Debug\net9.0\GameEngine.dll
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\bin\Debug\net9.0\GameEngine.pdb
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.dll
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\refint\GameEngine.dll
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\GameEngine.pdb
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\GameEngine\obj\Debug\net9.0\ref\GameEngine.dll

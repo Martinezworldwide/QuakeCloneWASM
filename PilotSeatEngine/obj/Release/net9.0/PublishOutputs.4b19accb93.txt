@@ -1,0 +1,1 @@
+C:\Users\str1k\Desktop\webAssemblyQuakeClone\QuakeCloneWASM\site\pilot-seat\web.config

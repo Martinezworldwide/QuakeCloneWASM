@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuakeCloneWASM - First Person Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #canvas {
+            display: block;
+            border: 2px solid #0f0;
+            background: #000;
+            width: 100%;
+            height: 100%;
+            max-width: 1280px;
+            max-height: 720px;
+            cursor: none;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #loading-text {
+            font-size: 24px;
+            color: #0f0;
+            margin-bottom: 20px;
+        }
+
+        #loading-progress {
+            width: 300px;
+            height: 4px;
+            background: #333;
+            border: 1px solid #0f0;
+            overflow: hidden;
+        }
+
+        #loading-bar {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 5;
+            font-size: 14px;
+            color: #0f0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 5;
+            font-size: 12px;
+            color: #0f0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border: 1px solid #0f0;
+        }
+
+        #controls h3 {
+            margin-bottom: 5px;
+            color: #0f0;
+        }
+
+        #controls p {
+            margin: 2px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border: 2px solid #f00;
+            color: #f00;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">
+            <div id="loading-text">Loading QuakeCloneWASM...</div>
+            <div id="loading-progress">
+                <div id="loading-bar"></div>
+            </div>
+        </div>
+        <canvas id="canvas" width="800" height="600"></canvas>
+        <div id="hud">
+            <div>FPS: <span id="fps">0</span></div>
+            <div id="location-info" style="margin-top: 10px;">Location: <span id="location">Planet Surface</span></div>
+        </div>
+        <div id="controls">
+            <h3>Controls</h3>
+            <p><strong>WASD</strong> - Move</p>
+            <p><strong>Mouse</strong> - Look around</p>
+            <p><strong>Click</strong> - Lock cursor</p>
+            <p><strong>ESC</strong> - Release cursor</p>
+            <p><strong>B</strong> - Beam Up to Spaceship</p>
+            <p><strong>P</strong> - Planet Selector (on spaceship)</p>
+        </div>
+        <button id="beam-up-btn" style="position: absolute; bottom: 10px; right: 10px; z-index: 5; padding: 15px 25px; font-size: 16px; background: rgba(0, 255, 0, 0.2); border: 2px solid #0f0; color: #0f0; cursor: pointer; font-family: 'Courier New', monospace; display: none;">BEAM UP</button>
+        <button id="pilot-seat-btn" style="position: absolute; bottom: 10px; right: 150px; z-index: 5; padding: 15px 25px; font-size: 16px; background: rgba(0, 150, 255, 0.3); border: 2px solid #0af; color: #0af; cursor: pointer; font-family: 'Courier New', monospace; display: none;">PILOT SEAT</button>
+        <div id="loading-screen" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #0af;">
+            <div style="font-size: 32px; margin-bottom: 20px; text-align: center;">TRANSITIONING TO PILOT SEAT</div>
+            <div style="font-size: 18px; margin-bottom: 30px; color: #0ff;">Initializing C# Game Engine (Blazor WebAssembly)...</div>
+            <div id="loading-progress-pilot" style="width: 400px; height: 8px; background: rgba(10, 160, 255, 0.2); border: 1px solid #0af; overflow: hidden;">
+                <div id="loading-bar-pilot" style="height: 100%; background: #0af; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <div id="loading-status" style="margin-top: 20px; font-size: 14px; color: #0ff;">Preparing C# runtime...</div>
+        </div>
+        <!-- Blazor WebAssembly app container (hidden until loaded) -->
+        <div id="pilot-seat-app" style="display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 50;"></div>
+        <div id="planet-selector" class="hidden" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 15; background: rgba(0, 0, 0, 0.9); border: 2px solid #0f0; padding: 20px; color: #0f0; max-width: 500px;">
+            <h2 style="margin-bottom: 15px; text-align: center;">SPACE EXPLORATION</h2>
+            <div id="planet-list"></div>
+            <button id="close-selector" style="margin-top: 15px; padding: 10px 20px; background: rgba(0, 255, 0, 0.2); border: 1px solid #0f0; color: #0f0; cursor: pointer; width: 100%;">Close</button>
+        </div>
+        <div id="error" class="hidden"></div>
+    </div>
+
+    <!-- Load Emscripten module first -->
+    <script src="wasm/game.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
+

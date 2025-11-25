@@ -1,0 +1,452 @@
+@page "/"
+@page "/pilot-seat"
+@using GameEngine
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<PageTitle>Pilot Seat - Space Flight</PageTitle>
+
+<div class="pilot-seat-container">
+    <div class="hud-overlay">
+        <!-- Ship Status Display -->
+        <div class="ship-status">
+            <div class="status-item">
+                <span class="label">Speed:</span>
+                <span class="value">@($"{_controller?.GetSpeed():F1}")</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Fuel:</span>
+                <span class="value">@($"{_controller?.GetFuel():F0}%")</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Hull:</span>
+                <span class="value">@($"{_controller?.GetHullIntegrity():F0}%")</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Shields:</span>
+                <span class="value">@($"{_controller?.GetShieldPower():F0}%")</span>
+            </div>
+            <div class="status-item">
+                <span class="label">Energy:</span>
+                <span class="value">@($"{_controller?.GetEnergy():F0}%")</span>
+            </div>
+        </div>
+        
+        <!-- Scanner Display -->
+        @if (_controller?.ScannerActive == true)
+        {
+            <div class="scanner-panel">
+                <h3>Planet Scanner</h3>
+                <div class="planet-list">
+                    @if (_controller?.GetNearbyPlanets()?.Any() == true)
+                    {
+                        @foreach (var planet in _controller.GetNearbyPlanets())
+                        {
+                            <div class="planet-item" @onclick="() => SelectPlanet(planet)">
+                                <strong>@planet.Name</strong>
+                                <div class="planet-details">
+                                    <div>Distance: @($"{planet.DistanceAu:F2} AU")</div>
+                                    <div>Temp: @($"{planet.SurfaceTempCelsius:F1}°C")</div>
+                                    <div>Gravity: @($"{planet.GravityG:F2}g")</div>
+                                    <div>Atmosphere: @planet.AtmosphereDescription</div>
+                                    <div>Resources: @planet.ResourceRichness%</div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="no-planets">No planets detected in range</div>
+                    }
+                </div>
+            </div>
+        }
+        
+        <!-- Selected Planet Info -->
+        @if (_controller?.SelectedPlanet != null)
+        {
+            <div class="selected-planet-info">
+                <h3>Selected: @_controller.SelectedPlanet.Name</h3>
+                <div class="planet-info-grid">
+                    <div><strong>Distance:</strong> @($"{_controller.SelectedPlanet.DistanceAu:F2} AU")</div>
+                    <div><strong>Temperature:</strong> @($"{_controller.SelectedPlanet.SurfaceTempK:F1}K") (@($"{_controller.SelectedPlanet.SurfaceTempCelsius:F1}°C"))</div>
+                    <div><strong>Gravity:</strong> @($"{_controller.SelectedPlanet.GravityG:F2}g")</div>
+                    <div><strong>Atmosphere:</strong> @_controller.SelectedPlanet.AtmosphereDescription</div>
+                    <div><strong>Radius:</strong> @($"{_controller.SelectedPlanet.RadiusKm:F0} km")</div>
+                    <div><strong>Rotation:</strong> @($"{_controller.SelectedPlanet.RotationPeriodHours:F1} hours")</div>
+                    <div><strong>Resources:</strong> @_controller.SelectedPlanet.ResourceRichness%</div>
+                    <div><strong>Water:</strong> @(_controller.SelectedPlanet.HasWater ? "Yes" : "No")</div>
+                    <div><strong>Life:</strong> @(_controller.SelectedPlanet.HasLife ? "Detected" : "None")</div>
+                </div>
+                <button class="beam-button" @onclick="BeamToPlanet">Beam Down to Planet</button>
+            </div>
+        }
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-group">
+            <h3>Flight Controls</h3>
+            <div class="control-row">
+                <label>Thruster:</label>
+                <input type="range" min="0" max="100" value="@(_thrusterPower * 100)" @oninput="OnThrusterChange" />
+                <span>@($"{_thrusterPower * 100:F0}%")</span>
+            </div>
+            <div class="control-row">
+                <label>Pitch:</label>
+                <input type="range" min="-100" max="100" value="@(_pitchInput * 100)" @oninput="OnPitchChange" />
+                <span>@($"{_pitchInput * 100:F0}%")</span>
+            </div>
+            <div class="control-row">
+                <label>Yaw:</label>
+                <input type="range" min="-100" max="100" value="@(_yawInput * 100)" @oninput="OnYawChange" />
+                <span>@($"{_yawInput * 100:F0}%")</span>
+            </div>
+            <div class="control-row">
+                <label>Roll:</label>
+                <input type="range" min="-100" max="100" value="@(_rollInput * 100)" @oninput="OnRollChange" />
+                <span>@($"{_rollInput * 100:F0}%")</span>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Systems</h3>
+            <button class="control-button" @onclick="ToggleScanner">
+                @(_controller?.ScannerActive == true ? "Disable" : "Enable") Scanner
+            </button>
+            <button class="control-button" @onclick="ExitPilotSeat">Exit Pilot Seat</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .pilot-seat-container {
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+        color: #00aaff;
+        font-family: 'Courier New', monospace;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hud-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .ship-status {
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #00aaff;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    
+    .status-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+        font-size: 14px;
+    }
+    
+    .status-item .label {
+        color: #00ffff;
+    }
+    
+    .status-item .value {
+        color: #00ff00;
+        font-weight: bold;
+    }
+    
+    .scanner-panel {
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #00aaff;
+        padding: 15px;
+        border-radius: 5px;
+        max-width: 400px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .scanner-panel h3 {
+        color: #00ffff;
+        margin-bottom: 10px;
+    }
+    
+    .planet-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .planet-item {
+        background: rgba(0, 170, 255, 0.1);
+        border: 1px solid #00aaff;
+        padding: 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .planet-item:hover {
+        background: rgba(0, 170, 255, 0.3);
+    }
+    
+    .planet-item strong {
+        color: #00ffff;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .planet-details {
+        font-size: 11px;
+        color: #00ff00;
+    }
+    
+    .planet-details div {
+        margin: 2px 0;
+    }
+    
+    .no-planets {
+        color: #888;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .selected-planet-info {
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #00ff00;
+        padding: 15px;
+        border-radius: 5px;
+        max-width: 400px;
+    }
+    
+    .selected-planet-info h3 {
+        color: #00ff00;
+        margin-bottom: 10px;
+    }
+    
+    .planet-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        font-size: 12px;
+        margin-bottom: 15px;
+    }
+    
+    .planet-info-grid div {
+        color: #00ffff;
+    }
+    
+    .planet-info-grid strong {
+        color: #00ff00;
+    }
+    
+    .beam-button {
+        width: 100%;
+        padding: 10px;
+        background: rgba(0, 255, 0, 0.2);
+        border: 2px solid #00ff00;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .beam-button:hover {
+        background: rgba(0, 255, 0, 0.4);
+    }
+    
+    .control-panel {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #00aaff;
+        padding: 20px;
+        border-radius: 5px;
+        min-width: 300px;
+    }
+    
+    .control-group {
+        margin-bottom: 20px;
+    }
+    
+    .control-group h3 {
+        color: #00ffff;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+    
+    .control-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    
+    .control-row label {
+        color: #00ffff;
+        min-width: 60px;
+        font-size: 12px;
+    }
+    
+    .control-row input[type="range"] {
+        flex: 1;
+        accent-color: #00aaff;
+    }
+    
+    .control-row span {
+        color: #00ff00;
+        min-width: 40px;
+        font-size: 12px;
+        text-align: right;
+    }
+    
+    .control-button {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: rgba(0, 170, 255, 0.2);
+        border: 1px solid #00aaff;
+        color: #00aaff;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .control-button:hover {
+        background: rgba(0, 170, 255, 0.4);
+    }
+</style>
+
+@code {
+    private PilotSeatController? _controller;
+    private SpaceShip? _ship;
+    private List<Planet> _planets = new();
+    private float _thrusterPower = 0.0f;
+    private float _pitchInput = 0.0f;
+    private float _yawInput = 0.0f;
+    private float _rollInput = 0.0f;
+    private bool _isDisposed = false;
+    private CancellationTokenSource? _updateCancellation;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize planets from database
+        _planets = PlanetDatabase.GetAllPlanets();
+        
+        // Create ship
+        _ship = new SpaceShip
+        {
+            Position = new System.Numerics.Vector3(0, 0, 0),
+            Fuel = 100.0f,
+            HullIntegrity = 100.0f,
+            ShieldPower = 100.0f
+        };
+        
+        // Create pilot seat controller
+        _controller = new PilotSeatController(_ship, _planets);
+        _controller.Activate();
+        
+        // Start update loop
+        _updateCancellation = new CancellationTokenSource();
+        _ = StartUpdateLoop(_updateCancellation.Token);
+        
+        await base.OnInitializedAsync();
+    }
+    
+    private async Task StartUpdateLoop(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested && !_isDisposed)
+        {
+            if (_controller != null)
+            {
+                _controller.Update(0.016f); // ~60 FPS
+                StateHasChanged();
+            }
+            await Task.Delay(16, cancellationToken); // ~60 FPS
+        }
+    }
+    
+    private void OnThrusterChange(ChangeEventArgs e)
+    {
+        if (float.TryParse(e.Value?.ToString(), out float value))
+        {
+            _thrusterPower = value / 100.0f;
+            _controller?.SetThrusterPower(_thrusterPower);
+        }
+    }
+    
+    private void OnPitchChange(ChangeEventArgs e)
+    {
+        if (float.TryParse(e.Value?.ToString(), out float value))
+        {
+            _pitchInput = value / 100.0f;
+            _controller?.SetPitchInput(_pitchInput);
+        }
+    }
+    
+    private void OnYawChange(ChangeEventArgs e)
+    {
+        if (float.TryParse(e.Value?.ToString(), out float value))
+        {
+            _yawInput = value / 100.0f;
+            _controller?.SetYawInput(_yawInput);
+        }
+    }
+    
+    private void OnRollChange(ChangeEventArgs e)
+    {
+        if (float.TryParse(e.Value?.ToString(), out float value))
+        {
+            _rollInput = value / 100.0f;
+            _controller?.SetRollInput(_rollInput);
+        }
+    }
+    
+    private void ToggleScanner()
+    {
+        _controller?.ToggleScanner();
+    }
+    
+    private void SelectPlanet(Planet planet)
+    {
+        _controller?.SelectPlanet(planet);
+    }
+    
+    private async Task BeamToPlanet()
+    {
+        if (_controller?.SelectedPlanet != null)
+        {
+            // Call JavaScript to beam to planet (bridge to C/WASM)
+            await JSRuntime.InvokeVoidAsync("beamToPlanetFromCSharp", _planets.IndexOf(_controller.SelectedPlanet));
+        }
+    }
+    
+    private async Task ExitPilotSeat()
+    {
+        // Exit pilot seat and return to spaceship interior
+        await JSRuntime.InvokeVoidAsync("exitPilotSeat");
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        _isDisposed = true;
+        _updateCancellation?.Cancel();
+        _updateCancellation?.Dispose();
+        _controller?.Deactivate();
+        await Task.CompletedTask;
+    }
+}
+

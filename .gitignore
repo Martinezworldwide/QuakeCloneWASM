@@ -1,0 +1,32 @@
+# Build outputs (excluded from git, but needed for GitHub Pages)
+# Note: For GitHub Pages deployment, site/wasm files should be committed
+# Uncomment the lines below if you want to exclude WASM files from git
+# site/wasm/*.wasm
+# site/wasm/*.js
+# site/wasm/*.data
+# site/wasm/*.mem
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+

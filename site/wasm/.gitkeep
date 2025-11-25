@@ -1,0 +1,3 @@
+# WASM build output directory
+# Compiled WebAssembly files will be placed here after building
+
